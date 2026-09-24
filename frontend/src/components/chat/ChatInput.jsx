@@ -7,7 +7,7 @@ import AudioRecorderUI from "./AudioRecorderUI";
 import { validateFile, uploadMedia } from "../../services/uploadService";
 import { useToast } from "../ui/Toast";
 
-export default function ChatInput({ onSend, disabled }) {
+export default function ChatInput({ onSend, disabled, conversationId, onConversationCreated }) {
   const [text, setText] = useState("");
   const [attachments, setAttachments] = useState([]);
   const [modalKind, setModalKind] = useState(null); // 'image' | 'video' | 'audio' | null
@@ -44,12 +44,25 @@ export default function ChatInput({ onSend, disabled }) {
   }
 
   function runUpload(id, file, kind) {
-    uploadMedia(file, kind, (progress) => {
+    uploadMedia(file, kind, conversationId, (progress) => {
       setAttachments((prev) => prev.map((a) => (a.id === id ? { ...a, progress } : a)));
     })
       .then((result) => {
+        if (result.conversationId && onConversationCreated) {
+          onConversationCreated(result.conversationId);
+        }
         setAttachments((prev) =>
-          prev.map((a) => (a.id === id ? { ...a, status: "done", url: result.url } : a))
+          prev.map((a) =>
+            a.id === id
+              ? {
+                  ...a,
+                  status: "done",
+                  url: result.url,
+                  backendId: result.id,
+                  conversationId: result.conversationId,
+                }
+              : a
+          )
         );
       })
       .catch((err) => {

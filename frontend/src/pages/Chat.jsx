@@ -189,7 +189,9 @@ export default function Chat() {
       return;
     }
 
-    if (!text?.trim()) {
+    const effectiveText = text?.trim() || (attachments?.length ? "Please inspect the attached file(s) for vehicle diagnosis." : "");
+
+    if (!effectiveText) {
       return;
     }
 
@@ -198,7 +200,7 @@ export default function Chat() {
     // Show user's message immediately
     pushMessage({
       role: "user",
-      text,
+      text: effectiveText,
       attachments:
         attachments?.length
           ? attachments
@@ -206,7 +208,7 @@ export default function Chat() {
     });
 
     if (!draftIssueRef.current) {
-      draftIssueRef.current = text;
+      draftIssueRef.current = effectiveText;
     }
 
     setTyping(true);
@@ -214,7 +216,7 @@ export default function Chat() {
 
     try {
       const reply = await sendMessageApi({
-        text,
+        text: effectiveText,
         attachments,
 
         conversationId:
@@ -591,6 +593,12 @@ export default function Chat() {
             typing ||
             processing
           }
+          conversationId={currentConvIdRef.current}
+          onConversationCreated={(newId) => {
+            if (newId) {
+              currentConvIdRef.current = newId;
+            }
+          }}
         />
 
       ) : (

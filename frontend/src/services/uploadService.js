@@ -38,7 +38,11 @@ export async function uploadMedia(file, kind, conversationId, onProgress) {
   const formData = new FormData();
   formData.append("file", file, file.name || `audio-${Date.now()}.webm`);
   if (conversationId) {
-    formData.append("conversation_id", conversationId);
+    let cleanId = conversationId;
+    if (typeof cleanId === "string" && cleanId.startsWith("conv-")) {
+      cleanId = cleanId.replace("conv-", "");
+    }
+    formData.append("conversation_id", cleanId);
   }
 
   return new Promise((resolve, reject) => {

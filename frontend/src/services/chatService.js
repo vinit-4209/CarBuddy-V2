@@ -14,7 +14,10 @@ export async function sendMessage(payload) {
   const { text = "", attachments = [], conversationId = null } = payload;
 
   const trimmed = (text || "").trim();
-  const mediaIds = (attachments || []).map((a) => a.id).filter(Boolean);
+  const mediaIds = (attachments || [])
+    .map((a) => a.backendId || a.id)
+    .filter((id) => id != null && !isNaN(Number(id)))
+    .map((id) => Number(id));
 
   let messageToSend = trimmed;
   if (!messageToSend && attachments?.length > 0) {
@@ -30,6 +33,14 @@ export async function sendMessage(payload) {
   let numericConvId = conversationId;
   if (typeof numericConvId === "string" && numericConvId.startsWith("conv-")) {
     numericConvId = Number(numericConvId.replace("conv-", ""));
+  }
+
+  // Fallback to conversationId from an uploaded attachment if not yet set in state
+  if (!numericConvId && attachments?.length > 0) {
+    const attachConvId = attachments.find((a) => a.conversationId)?.conversationId;
+    if (attachConvId && !isNaN(Number(attachConvId))) {
+      numericConvId = Number(attachConvId);
+    }
   }
 
   const response = await fetch(`${API_BASE_URL}/chat/`, {

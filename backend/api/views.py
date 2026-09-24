@@ -33,16 +33,11 @@ def health_check(request):
 def chat(request):
     message_text = request.data.get("message", "").strip()
     conversation_id = request.data.get("conversation_id")
+    media_ids = request.data.get("media_ids", [])
 
-    # If message is empty but there's a conversation with media, permit inspection
-    if not message_text and not request.data.get("media_ids"):
-        return Response(
-            {
-                "success": False,
-                "error": "Message is required."
-            },
-            status=status.HTTP_400_BAD_REQUEST
-        )
+    if conversation_id and isinstance(conversation_id, str):
+        clean_id = conversation_id.replace("conv-", "").strip()
+        conversation_id = int(clean_id) if clean_id.isdigit() else None
 
     # -------------------------
     # Get or create conversation
@@ -62,6 +57,29 @@ def chat(request):
         conversation = Conversation.objects.create()
 
     # -------------------------
+    # Link any uploaded media to this active conversation
+    # -------------------------
+    if media_ids and isinstance(media_ids, list):
+        valid_ids = [int(m) for m in media_ids if str(m).isdigit()]
+        if valid_ids:
+            Message.objects.filter(id__in=valid_ids).update(conversation=conversation)
+
+    has_media = conversation.messages.exclude(media="").exclude(media__isnull=True).exists()
+
+    # If message is empty but there's media attached, provide a default inspection prompt
+    if not message_text:
+        if has_media or media_ids:
+            message_text = "I've uploaded vehicle media for mechanic inspection. Please examine it and provide your diagnosis."
+        else:
+            return Response(
+                {
+                    "success": False,
+                    "error": "Message is required."
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+    # -------------------------
     # Save user message
     # -------------------------
     user_message = Message.objects.create(
@@ -73,8 +91,9 @@ def chat(request):
 
     # -------------------------
     # Traditional logic: Check greetings first (zero AI cost)
+    # (Only treat as greeting if no media was uploaded)
     # -------------------------
-    if is_greeting(message_text):
+    if is_greeting(message_text) and not has_media:
         assistant_text = get_greeting_response()
         assistant_message = Message.objects.create(
             conversation=conversation,
@@ -438,10 +457,12 @@ def upload_media(request):
     # If conversation_id is missing or doesn't exist, automatically create a new conversation
     conversation = None
     if conversation_id:
-        try:
-            conversation = Conversation.objects.get(id=conversation_id)
-        except (Conversation.DoesNotExist, ValueError):
-            pass
+        clean_id = str(conversation_id).replace("conv-", "").strip()
+        if clean_id.isdigit():
+            try:
+                conversation = Conversation.objects.get(id=int(clean_id))
+            except (Conversation.DoesNotExist, ValueError):
+                pass
 
     if not conversation:
         conversation = Conversation.objects.create()
