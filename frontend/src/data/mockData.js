@@ -78,6 +78,8 @@ export const seedConversations = [];
 export const introMessage = {
   id: "m0",
   role: "ai",
+  engine: "rule_engine",
+  engineLabel: "Local Rule Engine (0 AI Calls)",
   text: "Hello! I'm CarBuddy V2, your virtual senior automotive mechanic. What vehicle (make, model, year) are you driving, and what symptoms or issue are you experiencing today?",
   time: "Just now",
 };

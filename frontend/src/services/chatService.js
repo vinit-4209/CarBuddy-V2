@@ -86,6 +86,8 @@ export async function sendMessage(payload) {
       hour: "2-digit",
       minute: "2-digit",
     }),
+    engine: data.engine || (data.is_automotive === false ? "domain_filter" : "gemini"),
+    engineLabel: data.engine_label || (data.is_automotive === false ? "Domain Filter (0 AI Calls)" : "AI Mechanic Engine"),
     conversationId: data.conversation_id,
     isAutomotive: data.is_automotive,
     needsFollowup: data.needs_followup,

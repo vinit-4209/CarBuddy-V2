@@ -20,6 +20,13 @@ import { timeNow } from "../utils/format";
 
 let idCounter = 0;
 
+const SAMPLE_PROMPTS = [
+  { icon: "🌡️", label: "Engine Overheating in Traffic", text: "My 2018 Honda Civic engine starts overheating when idling in heavy traffic" },
+  { icon: "🛑", label: "Squealing Brakes", text: "I hear a loud high-pitched squeal when I press the brake pedal" },
+  { icon: "⚠️", label: "Rough Idle & Shaking", text: "My car engine shudders and shakes roughly when stopped at traffic signals" },
+  { icon: "💧", label: "Green Fluid Leak", text: "There is bright greenish-yellow fluid pooling under the front bumper of my car" },
+];
+
 function uid() {
   idCounter += 1;
   return `msg-${Date.now()}-${idCounter}`;
@@ -234,9 +241,9 @@ export default function Chat() {
       pushMessage({
         role: "ai",
         text: reply.text,
-
-        quickReplies:
-          reply.quickReplies,
+        engine: reply.engine,
+        engineLabel: reply.engineLabel,
+        quickReplies: reply.quickReplies,
       });
 
       // --------------------------------
@@ -586,21 +593,43 @@ export default function Chat() {
       />
 
       {!readOnly ? (
+        <>
+          {messages.length <= 1 && (
+            <div className="border-t border-mist-100 bg-mist-50/70 px-4 py-2.5">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-500 mb-2 flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-ignition-500"></span>
+                Test with a real sample issue (1-click):
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {SAMPLE_PROMPTS.map((p) => (
+                  <button
+                    key={p.label}
+                    onClick={() => handleSend(p.text, [])}
+                    disabled={typing || processing}
+                    className="text-xs px-3 py-1.5 rounded-xl bg-white border border-mist-200 text-ink-700 hover:border-ignition-500 hover:text-ignition-600 hover:bg-ignition-50/40 transition-all font-medium flex items-center gap-1.5 shadow-2xs text-left cursor-pointer"
+                  >
+                    <span>{p.icon}</span>
+                    <span>{p.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
-        <ChatInput
-          onSend={handleSend}
-          disabled={
-            typing ||
-            processing
-          }
-          conversationId={currentConvIdRef.current}
-          onConversationCreated={(newId) => {
-            if (newId) {
-              currentConvIdRef.current = newId;
+          <ChatInput
+            onSend={handleSend}
+            disabled={
+              typing ||
+              processing
             }
-          }}
-        />
-
+            conversationId={currentConvIdRef.current}
+            onConversationCreated={(newId) => {
+              if (newId) {
+                currentConvIdRef.current = newId;
+              }
+            }}
+          />
+        </>
       ) : (
 
         <div className="border-t border-mist-200 bg-white px-4 sm:px-6 py-4 text-center">

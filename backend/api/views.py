@@ -104,6 +104,8 @@ def chat(request):
         return Response({
             "success": True,
             "conversation_id": conversation.id,
+            "engine": "rule_engine",
+            "engine_label": "Local Rule Engine (0 AI Calls)",
             "user_message": {
                 "id": user_message.id,
                 "content": user_message.content,
@@ -148,6 +150,8 @@ def chat(request):
         return Response({
             "success": True,
             "conversation_id": conversation.id,
+            "engine": "rule_engine",
+            "engine_label": "Local Booking Router (0 AI Calls)",
             "user_message": {
                 "id": user_message.id,
                 "content": user_message.content,
@@ -196,6 +200,8 @@ def chat(request):
         return Response({
             "success": True,
             "conversation_id": conversation.id,
+            "engine": "domain_filter",
+            "engine_label": "Domain Filter (0 AI Calls)",
             "user_message": {
                 "id": user_message.id,
                 "content": user_message.content,
@@ -204,7 +210,7 @@ def chat(request):
             "assistant_message": {
                 "id": assistant_message.id,
                 "content": assistant_message.content,
-                "role": "assistant",
+                "role": assistant_message.role,
             },
             "is_automotive": False,
             "needs_followup": False,
@@ -217,6 +223,8 @@ def chat(request):
     conversation_context = build_conversation_context(conversation)
     media_paths = get_conversation_media_paths(conversation)
     ai_result = None
+    used_engine = "gemini"
+    used_engine_label = "Gemini Multimodal AI" if media_paths else "Gemini 3.6 Flash"
 
     # 1. Try Gemini
     try:
@@ -228,15 +236,21 @@ def chat(request):
         # 2. Try Groq
         try:
             ai_result = analyze_with_groq(conversation_context)
+            used_engine = "groq"
+            used_engine_label = "Groq LLaMA-3 (Fast Fallback)"
         except Exception as groq_error:
             print(f"Groq unavailable: {groq_error}")
             print("Falling back to traditional rule-based logic...")
 
             # 3. Rule-based traditional backend logic
             ai_result = process_message(message_text, conversation)
+            used_engine = "rule_fallback"
+            used_engine_label = "Deterministic Rule Fallback"
 
     if not ai_result:
         ai_result = process_message(message_text, conversation)
+        used_engine = "rule_fallback"
+        used_engine_label = "Deterministic Rule Fallback"
 
     # -------------------------
     # Determine assistant message text
@@ -334,6 +348,8 @@ def chat(request):
     return Response({
         "success": True,
         "conversation_id": conversation.id,
+        "engine": used_engine,
+        "engine_label": used_engine_label,
         "user_message": {
             "id": user_message.id,
             "content": user_message.content,
